@@ -13,11 +13,13 @@ plt.style.use('ggplot')
 
 class PropensityScoreModel():
 
-    def __init__(self, raw_df, treatment, covariate, outcomes, model, params, scaler):
+    def __init__(self, raw_df, treatment, covariate, outcomes,
+                 random_state=None, model=None, params=None, scaler=None):
         self.raw_df = raw_df
         self.treatment = treatment
         self.covariate = covariate
         self.outcomes = outcomes
+        self.random_state = random_state
 
         self.model, self.scores = self._fit(
             raw_df[covariate], raw_df[treatment], model, params, scaler)
