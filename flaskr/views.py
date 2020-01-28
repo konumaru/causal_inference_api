@@ -85,9 +85,13 @@ def show_csv(filename):
     outcomes = ['gamedummy', 'gamecount', 'gamesecond']
 
     ps_model = PropensityScoreModel(df, treatment, covariate, outcomes)
-    effect = ps_model.estimate_ate().values.tolist()
+    effects = ps_model.estimate_ate().values.tolist()
 
-    return render_template('csv.html', result=zip(outcomes, effect))
+    return render_template(
+        'csv.html',
+        result=zip(outcomes, effects),
+        chart_result=zip(outcomes, effects),
+    )
 
 
 @app.route('/uploads/<filename>')
