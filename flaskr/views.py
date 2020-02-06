@@ -32,6 +32,34 @@ def allowed_file(filename):
 
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_file():
+    html_file = 'upload.html'
+    filename = request.args.get('filename')
+    treatment = request.form.get('treatment')
+    covariate = request.form.getlist('covariate')
+    outcomes = request.form.getlist('outcomes')
+
+    if treatment is not None and covariate != [] and outcomes != []:
+        # Processing for causal inference after select variavles.
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        df = pd.read_csv(filepath)
+
+        # treatment = 'cm_dummy'
+        # covariate = [
+        #     'TVwatch_day', 'age', 'sex', 'marry_dummy', 'child_dummy', 'inc', 'pmoney', 'area_kanto',
+        #     'area_tokai', 'area_keihanshin', 'job_dummy1', 'job_dummy2', 'job_dummy3', 'job_dummy4', 'job_dummy5',
+        #     'job_dummy6', 'job_dummy7', 'fam_str_dummy1', 'fam_str_dummy2', 'fam_str_dummy3', 'fam_str_dummy4']
+        # outcomes = ['gamedummy', 'gamecount', 'gamesecond']
+
+        ps_model = PropensityScoreModel(df, treatment, covariate, outcomes)
+        effects = ps_model.estimate_ate().values.tolist()
+
+        return render_template(
+            html_file,
+            title='Upload new File',
+            cols=df.columns.tolist(),
+            result=zip(outcomes, effects),
+            chart_result=zip(outcomes, effects))
+
     if request.method == 'POST':
         # check if the post request has the file part
         if 'file' not in request.files:
@@ -45,55 +73,19 @@ def upload_file():
             flash('No selected file')
             return redirect(request.url)
 
-        if file and allowed_file(file.filename):
+        # Processing to uploaded csv file.
+        if not filename or file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            return redirect(url_for('show_csv', filename=filename))
+            return redirect(url_for('upload_file', filename=filename))
 
-    return render_template('upload.html', title='Upload new File')
+    if filename:
+        # Processing for selecting variables.
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        df = pd.read_csv(filepath)
+        return render_template(
+            html_file,
+            title='Upload New File',
+            cols=df.columns.tolist())
 
-
-@app.route('/show_csv/<filename>', methods=['GET', 'POST'])
-def show_csv(filename):
-    if request.method == 'POST':
-        # check if the post request has the file part
-        if 'file' not in request.files:
-            flash('No file part')
-            return redirect(request.url)
-
-        file = request.files['file']
-        # if user does not select file, browser also
-        # submit an empty part without filename
-        if file.filename == '':
-            flash('No selected file')
-            return redirect(request.url)
-
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            return redirect(url_for('show_csv', filename=filename))
-
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    raw_df = pd.read_csv(filepath)
-
-    df = raw_df.copy()
-    treatment = 'cm_dummy'
-    covariate = [
-        'TVwatch_day', 'age', 'sex', 'marry_dummy', 'child_dummy', 'inc', 'pmoney', 'area_kanto',
-        'area_tokai', 'area_keihanshin', 'job_dummy1', 'job_dummy2', 'job_dummy3', 'job_dummy4', 'job_dummy5',
-        'job_dummy6', 'job_dummy7', 'fam_str_dummy1', 'fam_str_dummy2', 'fam_str_dummy3', 'fam_str_dummy4']
-    outcomes = ['gamedummy', 'gamecount', 'gamesecond']
-
-    ps_model = PropensityScoreModel(df, treatment, covariate, outcomes)
-    effects = ps_model.estimate_ate().values.tolist()
-
-    return render_template(
-        'csv.html',
-        result=zip(outcomes, effects),
-        chart_result=zip(outcomes, effects),
-    )
-
-
-@app.route('/uploads/<filename>')
-def uploaded_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    return render_template(html_file, title='Upload New File')

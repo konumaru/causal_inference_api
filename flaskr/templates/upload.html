@@ -8,4 +8,98 @@
     <input type=submit value=Upload>
 </form>
 
+{% if cols %}
+<form method=post enctype=multipart/form-data>
+    <p>介入変数 / 共変量 / 結果変数 を選択してください。<p>
+    <p>介入変数：介入行為の有無を表す変数。</p>
+    <p>共変量：介入群・非介入群間で分布が揃っておらず、偏りをなくしたい変数。</p>
+    <p>結果変数：効果量を表す変数</p>
+    <div>
+    <table width="auto" style="table-layout: auto;">
+      <tr>
+        <th>変数名</th>
+        <th>介入変数</th>
+        <th>共変量</th>
+        <th>結果変数</th>
+      </tr>
+      {% for c in cols %}
+        <tr>
+          <td align="center"><a class="jidori" style="display: inline-block;">{{c}}</a></td>
+          <td align="center"><input type="radio" name='treatment' value="{{c}}"></td>
+          <td align="center"><input type="checkbox" name='covariate' value="{{c}}" checked></td>
+          <td align="center"><input type="checkbox" name='outcomes' value="{{c}}"></td>
+        </tr>
+      {% endfor %}
+    </table>
+    <br>
+    <div>
+        <button type="submit">Run!</button>
+    </div>
+</form>
+{% endif %}
+
+
+{% if result %}
+<div>
+  <table border="1">
+    <tr>
+      <th>outcome</th>
+      <th>Treated</th>
+      <th>Untreated</th>
+      <th>ATE</th>
+    </tr>
+    {% for outcome, row in result %}
+    <tr>
+      <td>{{ outcome }}</td>
+      <td>{{ row[0] }}</td>
+      <td>{{ row[1] }}</td>
+      <td>{{ row[2] }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+
+<div>
+  <script src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/1.0.2/Chart.min.js'></script>
+  {% for outcome, row in chart_result %}
+    <canvas id="chart-{{ outcome }}" width="500" height="350" 
+      style="margin-top: 50px; margin-bottom: 50px;"></canvas>
+    <script>
+      // bar chart data
+      var barData = {
+        labels : ["treat", "control"],
+        datasets : [{
+          label: 'my dataset',
+          fill: false,
+          fillColor: "rgba(151,187,205,0.2)",
+          strokeColor: "rgba(151,187,205,1)",
+          pointColor: "rgba(151,187,205,1)",
+          data: ["{{ row[0] }}", "{{ row[1] }}"],
+        }]
+      }
+      // bar chart options
+      var barOptions =  {
+        legend: {
+          potition: 'top'
+        },
+        title: {
+          display: true,
+          test: '{{ outcome }}'
+        }
+      }
+      // get bar chart canvas
+      var ctx = document.getElementById("chart-{{ outcome }}").getContext("2d");
+      // draw bar chart
+      new Chart(ctx).Bar(barData);
+      /*new Chart(ctx, {
+        type: 'bar',
+        data: barData,
+        options: barOptions
+      });*/
+    </script>
+  {% endfor %}
+</div>
+{% endif %}
+
+
 {% endblock %}
